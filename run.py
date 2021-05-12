@@ -7,10 +7,12 @@ kernel_size = 3
 stride = 1
 padding = 1
 batch_size = (4, in_channels, 210, 160)
+dout_size = (4, out_channels, 210, 160)
 
+np.random.seed(42)
 
-x = np.arange(np.prod(batch_size)).reshape(batch_size)  # create data for forward pass
-dout = np.random.random((4, out_channels, 210, 160))  # create random data for backward
+x = np.random.random(batch_size)  # create data for forward pass
+dout = np.random.random(dout_size)  # create random data for backward
 print('x: ', x.shape)
 print('d_out: ', dout.shape)
 

@@ -42,7 +42,6 @@ class Conv2D:
         self._init_weights()
 
     def _init_weights(self):
-        np.random.seed(1024)
         self.weight = 1e-3 * np.random.randn(self.out_channels, self.in_channels,  self.kernel_size, self.kernel_size)
         self.bias = np.zeros(self.out_channels)
 
@@ -61,7 +60,7 @@ class Conv2D:
         # add bias to kernels
         out += self.bias[None, :, None, None]
 
-        self.cache = x
+        self.cache = windows
         return out
 
     def backward(self, dout):
@@ -70,9 +69,8 @@ class Conv2D:
         :param dout: upstream gradients
         :return: dx, dw, and db relative to this module
         """
-        x = self.cache
+        windows = self.cache
 
-        windows = getWindows(x, self.kernel_size, self.padding, self.stride)
         dout_windows = getWindows(dout, self.kernel_size, self.padding, stride=1)
         rot_kern = np.rot90(self.weight, 2, axes=(2, 3))
 
