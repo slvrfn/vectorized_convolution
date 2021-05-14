@@ -4,10 +4,10 @@ from convolution import Conv2D
 in_channels = 3
 out_channels = 128
 kernel_size = 3
-stride = 1
+stride = 2
 padding = 1
 batch_size = (4, in_channels, 210, 160)
-dout_size = (4, out_channels, 210, 160)
+dout_size = (4, out_channels, 105, 80)
 
 np.random.seed(42)
 
