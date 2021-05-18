@@ -1,19 +1,25 @@
 import numpy as np
 
 
-def getWindows(input, kernel_size, padding, stride):
-    padd = ((0,), (0,), (padding,), (padding,))
-    pad_input = np.pad(input, pad_width=padd, mode='constant', constant_values=(0.,))
+def getWindows(input, output_size, kernel_size, padding=0, stride=1, dilate=0):
+    working_input = input
+    working_pad = padding
+    # dilate the input if necessary
+    if dilate != 0:
+        working_input = np.insert(working_input, range(1, input.shape[2]), 0, axis=2)
+        working_input = np.insert(working_input, range(1, input.shape[3]), 0, axis=3)
 
-    bs, c, h, w = pad_input.shape
-    batch_str, channel_str, kern_h_str, kern_w_str = pad_input.strides
+    # pad the input if necessary
+    if working_pad != 0:
+        working_input = np.pad(working_input, pad_width=((0,), (0,), (working_pad,), (working_pad,)), mode='constant', constant_values=(0.,))
 
-    output_width = (w - kernel_size) // stride + 1
-    output_height = (h - kernel_size) // stride + 1
+    in_b, in_c, out_h, out_w = output_size
+    out_b, out_c, _, _ = input.shape
+    batch_str, channel_str, kern_h_str, kern_w_str = working_input.strides
 
     return np.lib.stride_tricks.as_strided(
-        pad_input,
-        (bs, c, output_height, output_width, kernel_size, kernel_size),
+        working_input,
+        (out_b, out_c, out_h, out_w, kernel_size, kernel_size),
         (batch_str, channel_str, stride * kern_h_str, stride * kern_w_str, kern_h_str, kern_w_str)
     )
 
@@ -53,14 +59,18 @@ class Conv2D:
                  parameters.
         """
 
-        windows = getWindows(x, self.kernel_size, self.padding, self.stride)
+        n, c, h, w = x.shape
+        out_h = (h - self.kernel_size + 2 * self.padding) // self.stride + 1
+        out_w = (w - self.kernel_size + 2 * self.padding) // self.stride + 1
+
+        windows = getWindows(x, (n, c, out_h, out_w), self.kernel_size, self.padding, self.stride)
 
         out = np.einsum('bihwkl,oikl->bohw', windows, self.weight)
 
         # add bias to kernels
         out += self.bias[None, :, None, None]
 
-        self.cache = windows
+        self.cache = x, windows
         return out
 
     def backward(self, dout):
@@ -69,9 +79,11 @@ class Conv2D:
         :param dout: upstream gradients
         :return: dx, dw, and db relative to this module
         """
-        windows = self.cache
+        x, windows = self.cache
 
-        dout_windows = getWindows(dout, self.kernel_size, self.padding, stride=1)
+        padding = self.kernel_size - 1 if self.padding == 0 else self.padding
+
+        dout_windows = getWindows(dout, x.shape, self.kernel_size, padding=padding, stride=1, dilate=self.stride - 1)
         rot_kern = np.rot90(self.weight, 2, axes=(2, 3))
 
         db = np.sum(dout, axis=(0, 2, 3))
