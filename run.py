@@ -6,8 +6,8 @@ out_channels = 128
 kernel_size = 3
 stride = 2
 padding = 1
-batch_size = (1, in_channels, 12, 10)
-dout_size = (1, out_channels, 6, 5)
+batch_size = (4, in_channels, 12, 10)
+dout_size = (4, out_channels, 6, 5)
 
 np.random.seed(42)
 
